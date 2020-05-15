@@ -1,4 +1,5 @@
 //! This package enables you to work with the Arvile calendar.
+use std::fmt;
 extern crate chrono;
 use chrono::{Datelike, Utc};
 
@@ -48,6 +49,15 @@ impl Date {
             return std::char::from_u32_unchecked(0x40 + offset);
         }
     }
+
+    /// String representation.
+    pub fn to_string(&self) -> String {
+        let year_long = self.date.clone().year().to_string();
+        let year = &year_long[2..4];
+        let mon = self.get_month_char();
+        let d = self.get_dom();
+        format!("{}{}{:02}", year, mon, d)
+    }
 }
 
 // trait implementations
@@ -60,6 +70,12 @@ impl From<chrono::Date<Utc>> for Date {
 impl From<&chrono::Date<Utc>> for Date {
     fn from(item: &chrono::Date<Utc>) -> Self {
         Date { date: *item }
+    }
+}
+
+impl fmt::Display for Date {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:02}", self.to_string())
     }
 }
 
@@ -110,6 +126,17 @@ mod tests {
             println!("{:?}", adates[i]);
             assert_eq!(adates[i].get_month_u32(), m_u32[i]);
             assert_eq!(adates[i].get_month_char(), m_char[i]);
+        }
+    }
+
+    #[test]
+    fn to_string() {
+        let (_, adates) = get_test_data();
+        let a_str = vec![
+            "02A01", "01D07", "13B12", "02E07", "24C01", "03+01", "20A14",
+        ];
+        for i in 0..adates.len() {
+            assert_eq!(adates[i].to_string(), a_str[i]);
         }
     }
 }
