@@ -10,6 +10,26 @@ pub struct Date {
 }
 
 impl Date {
+    /// Check if current year is leap year
+    fn is_leap_year(self) -> bool {
+        let year = self.date.year();
+        if year % 4 != 0 {
+            // definetly no leap year
+            return false;
+        } else {
+            // possibly a leap year
+            if year % 100 == 0 {
+                if year % 400 == 0 {
+                    // this time for sure
+                    return true;
+                }
+                // but not when turning a century
+                return false;
+            }
+        }
+        return true;
+    }
+
     /// Return date as chronos::Date
     pub fn into_chrono(self) -> chrono::Date<Utc> {
         self.date.clone()
@@ -55,7 +75,14 @@ impl Date {
         let year_long = self.date.clone().year().to_string();
         let year = &year_long[2..4];
         let mon = self.get_month_char();
-        let d = self.get_dom();
+        let mut d = self.get_dom();
+        if mon == '+' && self.is_leap_year() {
+            match d {
+                1 => d = 2,
+                2 => d = 1,
+                _ => {}
+            }
+        }
         format!("{}{}{:02}", year, mon, d)
     }
 }
@@ -92,13 +119,35 @@ mod tests {
             Utc.ymd(2002, 3, 4),
             Utc.ymd(2024, 1, 29),
             Utc.ymd(2003, 12, 31),
-            Utc.ymd(2020, 1, 14),
+            Utc.ymd(2020, 1, 14),  // upper corner case
+            Utc.ymd(2019, 12, 31), // year day
+            Utc.ymd(2020, 12, 31), // year day in leap year
+            Utc.ymd(2020, 12, 30), // leap day
         ];
         let mut arvile_dates = Vec::<Date>::new();
         for i in &utc_dates {
             arvile_dates.push(crate::Date::from(i));
         }
         return (utc_dates, arvile_dates);
+    }
+
+    #[test]
+    fn is_leap_year() {
+        let mut dt1 = Utc.ymd(1999, 1, 1);
+        let mut av1 = crate::Date::from(dt1);
+        assert_eq!(av1.is_leap_year(), false);
+
+        dt1 = Utc.ymd(2000, 2, 2);
+        av1 = crate::Date::from(dt1);
+        assert_eq!(av1.is_leap_year(), true);
+
+        dt1 = Utc.ymd(2020, 2, 2);
+        av1 = crate::Date::from(dt1);
+        assert_eq!(av1.is_leap_year(), true);
+
+        dt1 = Utc.ymd(2100, 1, 1);
+        av1 = crate::Date::from(dt1);
+        assert_eq!(av1.is_leap_year(), false);
     }
 
     #[test]
@@ -111,7 +160,7 @@ mod tests {
     #[test]
     fn day_of_month() {
         let (_, adates) = get_test_data();
-        let dom = vec![1, 7, 12, 7, 1, 1, 14];
+        let dom = vec![1, 7, 12, 7, 1, 1, 14, 1, 2, 1];
         for i in 0..adates.len() {
             assert_eq!(adates[i].get_dom(), dom[i]);
         }
@@ -120,10 +169,9 @@ mod tests {
     #[test]
     fn month() {
         let (_, adates) = get_test_data();
-        let m_u32 = vec![1, 4, 2, 5, 3, 27, 1];
-        let m_char = vec!['A', 'D', 'B', 'E', 'C', '+', 'A'];
+        let m_u32 = vec![1, 4, 2, 5, 3, 27, 1, 27, 27, 27];
+        let m_char = vec!['A', 'D', 'B', 'E', 'C', '+', 'A', '+', '+', '+'];
         for i in 0..adates.len() {
-            println!("{:?}", adates[i]);
             assert_eq!(adates[i].get_month_u32(), m_u32[i]);
             assert_eq!(adates[i].get_month_char(), m_char[i]);
         }
@@ -133,7 +181,8 @@ mod tests {
     fn to_string() {
         let (_, adates) = get_test_data();
         let a_str = vec![
-            "02A01", "01D07", "13B12", "02E07", "24C01", "03+01", "20A14",
+            "02A01", "01D07", "13B12", "02E07", "24C01", "03+01", "20A14", "19+01", "20+01",
+            "20+02",
         ];
         for i in 0..adates.len() {
             assert_eq!(adates[i].to_string(), a_str[i]);
