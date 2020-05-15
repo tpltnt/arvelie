@@ -22,6 +22,32 @@ impl Date {
         }
         return dow;
     }
+
+    /// Retrieve the number of the current Arvile month
+    /// *note*: 27 encodes year day / leap day
+    pub fn get_month_u32(self) -> u32 {
+        let dcount = self.date.ordinal(); // days elapsed (incl. current)
+        let mlen = 14; // length of a month (in days)
+        let remainder = ((dcount % mlen) + mlen) % mlen; // full months + remainder = current day
+
+        // number of full months (& off-by-one for counting)
+        if 0 == remainder {
+            return dcount / mlen;
+        }
+        return ((dcount - remainder) / mlen) + 1;
+    }
+
+    /// Retrieve the current Arvile month as string (character).
+    /// *note*: '+' encodes year day / leap day
+    pub fn get_month_char(self) -> char {
+        let offset = self.get_month_u32();
+        unsafe {
+            if offset == 27 {
+                return std::char::from_u32_unchecked(0x2b);
+            }
+            return std::char::from_u32_unchecked(0x40 + offset);
+        }
+    }
 }
 
 // trait implementations
@@ -72,6 +98,18 @@ mod tests {
         let dom = vec![1, 7, 12, 7, 1, 1, 14];
         for i in 0..adates.len() {
             assert_eq!(adates[i].get_dom(), dom[i]);
+        }
+    }
+
+    #[test]
+    fn month() {
+        let (_, adates) = get_test_data();
+        let m_u32 = vec![1, 4, 2, 5, 3, 27, 1];
+        let m_char = vec!['A', 'D', 'B', 'E', 'C', '+', 'A'];
+        for i in 0..adates.len() {
+            println!("{:?}", adates[i]);
+            assert_eq!(adates[i].get_month_u32(), m_u32[i]);
+            assert_eq!(adates[i].get_month_char(), m_char[i]);
         }
     }
 }
